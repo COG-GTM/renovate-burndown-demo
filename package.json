@@ -14,7 +14,7 @@
     "lodash": "4.17.4",
     "minimist": "1.2.0",
     "node-fetch": "2.6.0",
-    "jsonwebtoken": "8.5.1",
+    "jsonwebtoken": "9.0.0",
     "tar": "4.4.8",
     "aws-sdk": "2.1000.0",
     "pg": "8.5.1",
