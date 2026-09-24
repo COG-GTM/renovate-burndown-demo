@@ -9,20 +9,20 @@
     "test": "node test/smoke.test.js"
   },
   "dependencies": {
-    "express": "4.17.1",
-    "axios": "0.21.1",
-    "lodash": "4.17.4",
-    "minimist": "1.2.0",
-    "node-fetch": "2.6.0",
-    "jsonwebtoken": "8.5.1",
-    "tar": "4.4.8",
+    "express": "4.20.0",
+    "axios": "0.33.0",
+    "lodash": "4.18.1",
+    "minimist": "1.2.6",
+    "node-fetch": "2.6.7",
+    "jsonwebtoken": "9.0.0",
+    "tar": "7.5.21",
     "aws-sdk": "2.1000.0",
-    "pg": "8.5.1",
-    "zod": "3.20.0"
+    "pg": "8.23.0",
+    "zod": "3.22.3"
   },
   "devDependencies": {
-    "jest": "27.0.6",
-    "typescript": "4.5.5"
+    "jest": "30.5.2",
+    "typescript": "7.0.2"
   },
   "engines": {
     "node": ">=16"
