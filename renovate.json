@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "separateMajorMinor": true,
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": { "labels": ["security"], "prPriority": 10 },
+  "packageRules": [
+    {
+      "description": "Batch all non-major updates into one PR",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major deps",
+      "automerge": false
+    },
+    {
+      "description": "Majors stay separate for Devin validation",
+      "matchUpdateTypes": ["major"],
+      "labels": ["needs-devin-validation"]
+    }
+  ]
+}
