@@ -5,7 +5,11 @@
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "osvVulnerabilityAlerts": true,
-  "vulnerabilityAlerts": { "labels": ["security"], "prPriority": 10 },
+  "vulnerabilityAlerts": { "labels": ["security"] },
+  "constraints": {
+    "python": "==3.14",
+    "node": ">=16"
+  },
   "packageRules": [
     {
       "description": "Batch all non-major updates into one PR",
