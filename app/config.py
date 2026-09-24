@@ -1,5 +1,6 @@
 """Service configuration loaded from environment variables."""
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -10,9 +11,7 @@ class Settings(BaseSettings):
     max_order_items: int = Field(default=50, ge=1)
     debug: bool = False
 
-    class Config:
-        env_prefix = "ORDERS_"
-        case_sensitive = False
+    model_config = SettingsConfigDict(env_prefix="ORDERS_", case_sensitive=False)
 
 
 def get_settings() -> Settings:
