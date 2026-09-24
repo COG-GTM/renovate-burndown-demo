@@ -5,7 +5,11 @@
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "osvVulnerabilityAlerts": true,
-  "vulnerabilityAlerts": { "labels": ["security"], "prPriority": 10 },
+  "constraints": {
+    "python": "==3.14.*",
+    "node": ">=16"
+  },
+  "vulnerabilityAlerts": { "labels": ["security"] },
   "packageRules": [
     {
       "description": "Batch all non-major updates into one PR",
@@ -17,6 +21,12 @@
       "description": "Majors stay separate for Devin validation",
       "matchUpdateTypes": ["major"],
       "labels": ["needs-devin-validation"]
+    },
+    {
+      "description": "Vulnerability fixes jump the queue",
+      "matchDatasources": ["npm", "pypi"],
+      "isVulnerabilityAlert": true,
+      "prPriority": 10
     }
   ]
 }
