@@ -6,7 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node test/smoke.test.js"
+    "test": "node test/smoke.test.js && node test/pricing.test.js"
   },
   "dependencies": {
     "express": "4.17.1",
