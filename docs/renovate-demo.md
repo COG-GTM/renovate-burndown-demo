@@ -21,13 +21,34 @@ Devin parent session runs !renovate_burndown
         |  child sessions branch off the bundle branch
         v
 Child fix PRs, each with its own before/after proof
-  -> unanswered product decisions are posted as a comment on the PR that raised them
-  -> Devin Automation "Renovate PR question answered"
-     trigger: github:issue_comment on a renovate/* or devin/* PR
-  -> the answer resumes the work and updates the PR
+  -> unanswered product decisions are posted as a <!-- devin-question --> comment
+     on the PR that raised them; the run does not stall on them
+  -> Devin Automation "Renovate burn-down: /devin-answer on a PR"
+     trigger: github:issue_comment where the body starts with /devin-answer
+  -> a new session applies the decision, pushes to that PR and replies in the thread
 ```
 
 Nobody clicks anything between the Renovate run and the fix PRs.
+
+## The question protocol
+
+Devin never guesses a product decision and never blocks a background run waiting for one. It posts this on the PR the question came from and carries on with the rest:
+
+```
+<!-- devin-question -->
+**Decision needed:** one sentence, the actual trade-off.
+
+- **A)** option, and what it costs
+- **B)** option, and what it costs
+
+What I did meanwhile: <the reversible thing that kept CI green>.
+Reply to this comment with `/devin-answer A` (or B, or free text) and I will apply it.
+```
+
+The HTML marker is how the follow-up session finds the question; a reply *starting with* `/devin-answer` is what fires the automation. Two live examples are open now:
+
+- Node engines floor (`>=18` vs `>=24`): https://github.com/COG-GTM/renovate-burndown-demo/pull/33
+- Keep or defer TypeScript 7: https://github.com/COG-GTM/renovate-burndown-demo/pull/31
 
 ## What actually ran here
 
@@ -90,10 +111,10 @@ available), and `ignoreDeps` is the honest answer for anything nobody intends to
 4. While it runs, walk the noise list above against the actual PR list.
 5. Open the bundle PR: the grouping rationale, the before/after evidence pack, green CI.
 6. Open a child fix PR, e.g. #30 (Node 24): the only behavioural difference is V8's malformed-JSON 400 wording, shown side by side rather than asserted.
-7. Open the PR comment where a child asked a question instead of guessing — the Node engines floor (`>=18` from tar 7 vs `>=24`), and whether TypeScript 7 stays. Answer it in the comment thread and the follow-up automation picks it up.
+7. Open the PR comment where a child asked a question instead of guessing — the Node engines floor (`>=18` from tar 7 vs `>=24`) on #33, and whether TypeScript 7 stays on #31. Reply `/devin-answer A`; a session starts on that comment, implements the choice, pushes to the PR and answers in the thread.
 
 ## Setup requirements
 
 - `RENOVATE_TOKEN` repository secret: a PAT (or App token) with `repo` + `workflow` scope. Without it the workflow fails at the Renovate step.
-- The Devin Automations live in Devin settings, not in this repo, and need `bypass_approval` so the parent can spawn children unattended.
+- The Devin Automations live in Devin settings, not in this repo, and need `bypass_approval` so the parent can spawn children unattended. Two are wired for this repo: the dashboard trigger (`github:issues`, title contains "Dependency Dashboard", runs `!renovate_burndown`, posts its report back as an issue comment) and the answer trigger (`github:issue_comment`, body starts with `/devin-answer`).
 - The Renovate GitHub App is an alternative to `.github/workflows/renovate.yml`; do not run both against this repo or you get duplicate PRs.
