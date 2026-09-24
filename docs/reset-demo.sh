@@ -31,7 +31,8 @@ else
   for line in "${prs[@]}"; do
     num=${line%%$'\t'*}
     echo "  #$num ${line#*$'\t'}"
-    run gh pr close "$num" --repo "$REPO" --delete-branch \
+    # branches are kept so a close is reversible: gh pr reopen <n>
+    run gh pr close "$num" --repo "$REPO" \
       --comment "Closing as part of a demo reset — superseded by the next burn-down run."
   done
 fi
