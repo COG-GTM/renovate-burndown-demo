@@ -79,6 +79,33 @@ Now the noise conversation, which is the one most people actually want:
 Worth landing: `aws-sdk` v2 is on the dashboard with **no PR**, because the successor is the
 `@aws-sdk/client-*` family. No Renovate setting will ever fix that one.
 
+### 3a. Two planted set-pieces (optional, 2 min each)
+
+**The minor bump that compiles and still breaks.** `src/pricing-client.js` calls a pricing service
+with a nested query object. Under `axios@0.21.1` that serialises to `filter={"region":"eu"}`; under
+`axios@0.33.0` it serialises to `filter[region]=eu`, and the service — which validates its own
+documented encoding — answers 400. Same source, same types, green build, red test:
+
+```
+npm test                       # passes on 0.21.1
+npm i --no-save axios@0.33.0
+node test/pricing.test.js      # Request failed with status code 400
+                               # {"error":"filter must be a JSON object",
+                               #  "received":"sku=A1&filter[region]=eu&filter[tier]=gold"}
+```
+
+> "Nothing a version range or a changelog scan catches. The only thing that catches it is running
+> the product. That's why the evidence pack isn't decoration."
+
+The fix is a decision, not a revert — pin a `paramsSerializer` and keep the security patch, or hold
+the version — so it's a natural second `<!-- devin-question -->` if the first one already landed.
+
+**The update no bot can propose.** `src/receipts.js` archives order receipts to S3 through the v2
+client. Going to v3 changes client construction, the config key names, the call style (command
+objects) and makes `GetObject` return a stream — a migration, not a bump. A child session does it
+as a real PR with before/after evidence, which is the cleanest statement of the boundary: Renovate
+owns "what version exists", Devin owns "what the change means here".
+
 ## 4. The bundle (3 min)
 
 The session posts its report as a comment on issue #24 and opens the bundle PR.
@@ -153,6 +180,10 @@ A Dependabot variant reads the open PR list instead.
 2. Leave the 24 `renovate/*` PRs open — they are the demo input.
 3. Delete the Devin comment from issue #24 so it reads as untouched.
 4. Leave both automations enabled.
+
+Or run `./docs/reset-demo.sh` (dry run) then `./docs/reset-demo.sh --apply`. It closes `devin/*` PRs
+without deleting branches (so `gh pr reopen <n>` undoes it), skips anything labelled `demo-infra`,
+removes Devin's dashboard comments, and reports the open `renovate/*` count.
 
 Do not reset mid-call: a second run correctly reports "already burned down, nothing to do", which
 is the right behaviour but a dull demo.
