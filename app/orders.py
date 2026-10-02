@@ -1,5 +1,5 @@
 """Order domain models and validation."""
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, validator
 
@@ -29,8 +29,10 @@ class Order(BaseModel):
     customer_email: str
     items: List[OrderItem]
 
-    @validator("items")
-    def items_within_limit(cls, v: List[OrderItem]) -> List[OrderItem]:
+    @validator("items", pre=True)
+    def items_within_limit(cls, v: Any) -> Any:
+        if not isinstance(v, (list, tuple)):
+            raise ValueError("items must be a list")
         limit = get_settings().max_order_items
         if len(v) == 0:
             raise ValueError("order must contain at least one item")
