@@ -1,9 +1,13 @@
 from fastapi import FastAPI, HTTPException
 
 from app.config import get_settings
+from app.limits import RequestBodyLimitMiddleware
 from app.orders import Order
 
 app = FastAPI(title=get_settings().app_name)
+app.add_middleware(
+    RequestBodyLimitMiddleware, max_body_bytes=get_settings().max_request_body_bytes
+)
 
 
 @app.get("/health")

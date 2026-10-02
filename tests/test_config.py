@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from app.config import Settings, get_settings
 
 
@@ -21,3 +24,10 @@ def test_env_prefix(monkeypatch):
 def test_case_insensitive_env(monkeypatch):
     monkeypatch.setenv("orders_app_name", "lowercase-api")
     assert Settings().app_name == "lowercase-api"
+
+
+def test_limits_are_bounded(monkeypatch):
+    assert Settings().max_request_body_bytes == 100_000
+    monkeypatch.setenv("ORDERS_MAX_ORDER_ITEMS", "100000")
+    with pytest.raises(ValidationError):
+        Settings()
