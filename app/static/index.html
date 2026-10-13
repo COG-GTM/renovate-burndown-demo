@@ -66,6 +66,17 @@
 
     function money(cents) { return "$" + (cents / 100).toFixed(2); }
     function el(id) { return document.getElementById(id); }
+    function esc(v) {
+      return String(v).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function invalidQtySkus() {
+      return CATALOG.filter(function (p) {
+        var q = Number(el("qty-" + p.sku).value);
+        return !Number.isInteger(q) || q < 0;
+      }).map(function (p) { return p.sku; });
+    }
 
     function nextOrderNumber() {
       var n = Number(localStorage.getItem("orders.seq") || 10040) + 1;
@@ -89,6 +100,7 @@
     }
 
     function updateEstimate() {
+      if (invalidQtySkus().length) { el("estimate").textContent = "—"; return; }
       var cents = selectedItems().reduce(function (s, i) { return s + i.quantity * i.unit_price_cents; }, 0);
       el("estimate").textContent = money(cents);
     }
@@ -96,9 +108,9 @@
     function showSuccess(order) {
       el("result").innerHTML =
         "<div class='status ok' id=result-status>&#10003; Order confirmed</div>" +
-        "<p class=meta>Order <b id=result-order-id>#" + order.order_id + "</b> for " + order.customer_email + "</p>" +
+        "<p class=meta>Order <b id=result-order-id>#" + esc(order.order_id) + "</b> for " + esc(order.customer_email) + "</p>" +
         "<table><tbody>" + order.items.map(function (i) {
-          return "<tr><td>" + i.sku + " &times; " + i.quantity + "</td><td class=num>" + money(i.quantity * i.unit_price_cents) + "</td></tr>";
+          return "<tr><td>" + esc(i.sku) + " &times; " + esc(i.quantity) + "</td><td class=num>" + money(i.quantity * i.unit_price_cents) + "</td></tr>";
         }).join("") + "</tbody></table>" +
         "<div class=total><span>Total charged</span><span id=result-total>" + money(order.total_cents) + "</span></div>";
     }
@@ -106,14 +118,20 @@
     function showErrors(status, detail) {
       var list = Array.isArray(detail) ? detail : [{ loc: [], msg: String(detail) }];
       el("result").innerHTML =
-        "<div class='status bad' id=result-status>&#10007; Order rejected (HTTP " + status + ")</div>" +
+        "<div class='status bad' id=result-status>&#10007; " +
+          (typeof status === "number" ? "Order rejected (HTTP " + status + ")" : "Order not sent") + "</div>" +
         "<ul class=errors>" + list.map(function (e) {
           var field = (e.loc || []).filter(function (p) { return p !== "body"; }).join(".");
-          return "<li>" + (field ? "<b>" + field + "</b>: " : "") + e.msg + "</li>";
+          return "<li>" + (field ? "<b>" + esc(field) + "</b>: " : "") + esc(e.msg) + "</li>";
         }).join("") + "</ul>";
     }
 
     function placeOrder() {
+      var bad = invalidQtySkus();
+      if (bad.length) {
+        showErrors("not sent", bad.map(function (sku) { return { loc: [sku], msg: "quantity must be a whole number" }; }));
+        return;
+      }
       var payload = { order_id: nextOrderNumber(), customer_email: el("email").value, items: selectedItems() };
       el("place").disabled = true;
       fetch("/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) })
