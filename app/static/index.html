@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orders console</title>
+  <style>
+    :root { --ink: #1b1f24; --muted: #5b6573; --line: #e3e7ec; --brand: #2f5bea; --ok: #1f8a4c; --bad: #c62828; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #f5f7fa; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; background: #fff; border-bottom: 1px solid var(--line); }
+    header h1 { margin: 0; font-size: 18px; }
+    .pill { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #eef2ff; color: var(--brand); }
+    .pill.down { background: #fdecea; color: var(--bad); }
+    main { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; max-width: 1080px; margin: 28px auto; padding: 0 28px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; }
+    .card h2 { margin: 0 0 14px; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+    th { font-size: 12px; color: var(--muted); font-weight: 600; }
+    td.num, th.num { text-align: right; }
+    input[type=number] { width: 64px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+    input[type=email] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+    label { display: block; margin: 16px 0 6px; font-size: 13px; color: var(--muted); }
+    .total { display: flex; justify-content: space-between; margin-top: 16px; font-weight: 600; }
+    button { margin-top: 18px; width: 100%; padding: 11px; border: 0; border-radius: 8px; background: var(--brand); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: default; }
+    #result:empty::before { content: "No order placed yet."; color: var(--muted); }
+    .status { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 10px; }
+    .status.ok { color: var(--ok); }
+    .status.bad { color: var(--bad); }
+    .errors { margin: 0; padding-left: 18px; color: var(--bad); }
+    .meta { color: var(--muted); font-size: 13px; margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Orders console</h1>
+    <span id="health" class="pill">checking…</span>
+  </header>
+  <main>
+    <section class="card">
+      <h2>New order</h2>
+      <table>
+        <thead><tr><th>SKU</th><th>Product</th><th class="num">Unit price</th><th class="num">Qty</th></tr></thead>
+        <tbody id="catalog"></tbody>
+      </table>
+      <label for="email">Customer email</label>
+      <input id="email" type="email" value="buyer@example.com" />
+      <div class="total"><span>Estimated total</span><span id="estimate">$0.00</span></div>
+      <button id="place">Place order</button>
+    </section>
+    <section class="card">
+      <h2>Last order</h2>
+      <div id="result"></div>
+    </section>
+  </main>
+  <script>
+    var CATALOG = [
+      { sku: "WIDGET", name: "Widget", cents: 500 },
+      { sku: "GADGET", name: "Gadget", cents: 1250 },
+      { sku: "SPROCKET", name: "Sprocket", cents: 325 },
+      { sku: "GIZMO", name: "Gizmo", cents: 4999 }
+    ];
+    var DEFAULT_QTY = { WIDGET: 2, GADGET: 1 };
+
+    function money(cents) { return "$" + (cents / 100).toFixed(2); }
+    function el(id) { return document.getElementById(id); }
+
+    function nextOrderNumber() {
+      var n = Number(localStorage.getItem("orders.seq") || 10040) + 1;
+      localStorage.setItem("orders.seq", n);
+      return n;
+    }
+
+    function selectedItems() {
+      return CATALOG.map(function (p) {
+        return { sku: p.sku, quantity: Number(el("qty-" + p.sku).value), unit_price_cents: p.cents };
+      }).filter(function (i) { return i.quantity > 0; });
+    }
+
+    function renderCatalog() {
+      el("catalog").innerHTML = CATALOG.map(function (p) {
+        return "<tr><td>" + p.sku + "</td><td>" + p.name + "</td><td class=num>" + money(p.cents) +
+          "</td><td class=num><input type=number min=0 max=99 id=qty-" + p.sku + " value=" + (DEFAULT_QTY[p.sku] || 0) + "></td></tr>";
+      }).join("");
+      CATALOG.forEach(function (p) { el("qty-" + p.sku).addEventListener("input", updateEstimate); });
+      updateEstimate();
+    }
+
+    function updateEstimate() {
+      var cents = selectedItems().reduce(function (s, i) { return s + i.quantity * i.unit_price_cents; }, 0);
+      el("estimate").textContent = money(cents);
+    }
+
+    function showSuccess(order) {
+      el("result").innerHTML =
+        "<div class='status ok' id=result-status>&#10003; Order confirmed</div>" +
+        "<p class=meta>Order <b id=result-order-id>#" + order.order_id + "</b> for " + order.customer_email + "</p>" +
+        "<table><tbody>" + order.items.map(function (i) {
+          return "<tr><td>" + i.sku + " &times; " + i.quantity + "</td><td class=num>" + money(i.quantity * i.unit_price_cents) + "</td></tr>";
+        }).join("") + "</tbody></table>" +
+        "<div class=total><span>Total charged</span><span id=result-total>" + money(order.total_cents) + "</span></div>";
+    }
+
+    function showErrors(status, detail) {
+      var list = Array.isArray(detail) ? detail : [{ loc: [], msg: String(detail) }];
+      el("result").innerHTML =
+        "<div class='status bad' id=result-status>&#10007; Order rejected (HTTP " + status + ")</div>" +
+        "<ul class=errors>" + list.map(function (e) {
+          var field = (e.loc || []).filter(function (p) { return p !== "body"; }).join(".");
+          return "<li>" + (field ? "<b>" + field + "</b>: " : "") + e.msg + "</li>";
+        }).join("") + "</ul>";
+    }
+
+    function placeOrder() {
+      var payload = { order_id: nextOrderNumber(), customer_email: el("email").value, items: selectedItems() };
+      el("place").disabled = true;
+      fetch("/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) })
+        .then(function (res) {
+          return res.json().then(function (body) {
+            if (res.ok) showSuccess(body); else showErrors(res.status, body.detail);
+          });
+        })
+        .catch(function (err) { showErrors("network", err.message); })
+        .then(function () { el("place").disabled = false; });
+    }
+
+    fetch("/health").then(function (r) { return r.json(); }).then(function (h) {
+      el("health").textContent = "API " + h.status + " · " + h.env;
+    }).catch(function () { el("health").textContent = "API down"; el("health").className = "pill down"; });
+
+    el("place").addEventListener("click", placeOrder);
+    renderCatalog();
+  </script>
+</body>
+</html>
