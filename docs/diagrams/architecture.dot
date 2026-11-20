@@ -1,0 +1,51 @@
+// Architecture of the renovate-burndown-demo orders-service sandbox (as on main).
+// Edit this file, then run ./render.sh to regenerate architecture.png and architecture.svg.
+digraph architecture {
+  graph [rankdir=LR, fontname="Helvetica", fontsize=12, nodesep=0.45, ranksep=0.8, pad=0.3,
+         label="renovate-burndown-demo: orders-service sandbox", labelloc=t, fontsize=16];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, fillcolor="#ffffff", color="#555555"];
+  edge  [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  client [label="HTTP client\n(curl, tests, browser)", shape=oval, fillcolor="#eeeeee"];
+
+  subgraph cluster_python {
+    label="Python service: app/  (FastAPI 0.100, pydantic 1.10)"; style="rounded,filled"; fillcolor="#e8f1fb"; color="#4a7ab5";
+    py_main   [label="app/main.py\nFastAPI app\nGET /health\nPOST /orders\n(+ /docs, /openapi.json)"];
+    py_orders [label="app/orders.py\nOrder / OrderItem models\nvalidators, total_cents()\nto_record(), parse_order()"];
+    py_config [label="app/config.py\nSettings (BaseSettings)\nenv prefix ORDERS_"];
+    py_main -> py_orders [label="validates body"];
+    py_main -> py_config [label="app_name, environment"];
+    py_orders -> py_config [label="max_order_items"];
+  }
+
+  subgraph cluster_node {
+    label="Node service: src/  (Express 4.17, zod 3.20)"; style="rounded,filled"; fillcolor="#eaf6ea"; color="#4a9a4a";
+    js_server [label="src/server.js\ncreateApp(): Express\nGET /health\nPOST /orders\nOrderSchema (zod), totalQty (lodash)\nsignToken (jsonwebtoken, unused by routes)"];
+  }
+
+  env [label="Environment variables\nORDERS_* (Python)\nPORT (Node, default 3000)", shape=note, fillcolor="#fff8dc"];
+
+  subgraph cluster_build {
+    label="Build, test and dependency automation"; style="rounded,filled"; fillcolor="#f6f0fa"; color="#8a5ab5";
+    docker   [label="Dockerfile\npython:3.9-slim\ncopies requirements.txt + app/\nCMD uvicorn app.main:app :8000"];
+    ci       [label=".github/workflows/ci.yml\njob python: 3.9, pytest tests\njob node: 16, npm test"];
+    renovate [label="renovate.json\nconfig:recommended\nminor+patch -> one grouped PR\nmajors -> needs-devin-validation\nvulnerability alerts -> security"];
+    pytests  [label="tests/\ntest_config.py, test_orders.py\n(pytest + FastAPI TestClient)"];
+    jstests  [label="test/smoke.test.js\nplain node assert\n(live server on random port)"];
+  }
+
+  manifests [label="Dependency manifests\nrequirements.txt (pinned, outdated)\npackage.json + package-lock.json\nDockerfile base image, CI actions", shape=folder, fillcolor="#fdecea"];
+
+  client -> py_main  [label=":8000"];
+  client -> js_server [label=":3000"];
+  env -> py_config [style=dashed];
+  env -> js_server [style=dashed];
+
+  docker -> py_main [label="packages", style=dashed];
+  ci -> pytests;
+  ci -> jstests;
+  pytests -> py_main [style=dotted];
+  jstests -> js_server [style=dotted];
+  renovate -> manifests [label="opens update PRs"];
+  manifests -> docker [style=dotted, arrowhead=none];
+}
