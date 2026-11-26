@@ -21,3 +21,12 @@ def test_env_prefix(monkeypatch):
 def test_case_insensitive_env(monkeypatch):
     monkeypatch.setenv("orders_app_name", "lowercase-api")
     assert Settings().app_name == "lowercase-api"
+
+
+def test_get_settings_reused_until_env_changes(monkeypatch):
+    first = get_settings()
+    assert get_settings() is first
+    monkeypatch.setenv("ORDERS_MAX_ORDER_ITEMS", "7")
+    changed = get_settings()
+    assert changed is not first
+    assert changed.max_order_items == 7
