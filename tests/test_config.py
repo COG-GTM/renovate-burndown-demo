@@ -25,8 +25,11 @@ def test_case_insensitive_env(monkeypatch):
 
 def test_get_settings_reused_until_env_changes(monkeypatch):
     first = get_settings()
-    assert get_settings() is first
+    again = get_settings()
+    assert again == first and again is not first
+    again.max_order_items = 99
+    assert get_settings().max_order_items == first.max_order_items
     monkeypatch.setenv("ORDERS_MAX_ORDER_ITEMS", "7")
     changed = get_settings()
-    assert changed is not first
+    assert changed != first
     assert changed.max_order_items == 7
